@@ -2,6 +2,8 @@ package com.rohit.pdftoimageconverttest
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.graphics.pdf.PdfRenderer
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
@@ -185,7 +187,12 @@ private fun Context.convertPdfToBitmap(
                 val h = resources.displayMetrics.densityDpi / 72 * page.height
                 val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
                 page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
-                bitmap?.let {
+                val mainBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config)
+                Canvas(mainBitmap).apply {
+                    drawColor(android.graphics.Color.WHITE)
+                    drawBitmap(bitmap, 0f,0f, Paint(Paint.ANTI_ALIAS_FLAG))
+                }
+                mainBitmap?.let {
                     bitmaps.add(it)
                 }
                 page.close()
