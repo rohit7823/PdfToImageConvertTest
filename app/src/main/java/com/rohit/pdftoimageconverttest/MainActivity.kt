@@ -6,13 +6,18 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.pdf.PdfRenderer
+import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
@@ -24,8 +29,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeContent
-import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -50,9 +53,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityOptionsCompat
 import androidx.core.util.PatternsCompat
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.rohit.pdftoimageconverttest.ui.theme.PdfToImageConvertTestTheme
 import io.ktor.client.HttpClient
@@ -124,6 +127,11 @@ fun Content(
         mutableStateOf(false)
     }
 
+    val activityResultLauncher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.CreateDocument("image/jpeg")) { result ->
+            context.saveDevice(images = images, createdUri = result)
+        }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets.ime
@@ -156,7 +164,10 @@ fun Content(
                         if (images.isNotEmpty()) {
                             ElevatedButton(
                                 onClick = {
-                                    context.saveDevice(images = images)
+                                    activityResultLauncher.launch(
+                                        input = "pdf_to_img_${System.currentTimeMillis()}",
+                                        options = ActivityOptionsCompat.makeBasic()
+                                    )
                                 },
                                 modifier = Modifier,
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
@@ -230,7 +241,11 @@ fun Content(
     }
 }
 
-private fun Context.saveDevice(images: List<Bitmap>) {
+
+private fun Context.saveDevice(
+    images: List<Bitmap>,
+    createdUri: Uri?
+) {
 
     val imgFiles = images.map { imgFile ->
         File("${getExternalFilesDir(Environment.DIRECTORY_PICTURES)}/$packageName/${imgFile.generationId}")
@@ -243,6 +258,7 @@ private fun Context.saveDevice(images: List<Bitmap>) {
                 put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
                 put(MediaStore.Images.Media.DATA, file.absolutePath)
             }
+
             return@mapIndexed contentResolver.insert(
                 /* url = */ MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                 /* values = */ contentValue
@@ -250,13 +266,19 @@ private fun Context.saveDevice(images: List<Bitmap>) {
                 images[index].compress(
                     /* format = */ Bitmap.CompressFormat.JPEG,
                     /* quality = */ 100,
-                    /* stream = */ contentResolver.openOutputStream(this, "rw")
+                    /* stream = */ contentResolver.openOutputStream(
+                        /* uri = */ createdUri!!,
+                        /* mode = */ "rw"
+                    )
                 )
             }
         } else {
             return@mapIndexed null
         }
     }
+
+
+
 
     if (uris.all { it != null }) {
         Toast.makeText(this, "Saved to Device", Toast.LENGTH_SHORT).show()
