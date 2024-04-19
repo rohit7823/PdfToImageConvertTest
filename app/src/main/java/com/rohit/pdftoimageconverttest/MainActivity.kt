@@ -129,6 +129,7 @@ fun Content(
 
     val activityResultLauncher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.CreateDocument("image/jpeg")) { result ->
+            if (result == null) return@rememberLauncherForActivityResult
             context.saveDevice(images = images, createdUri = result)
         }
 
@@ -244,7 +245,7 @@ fun Content(
 
 private fun Context.saveDevice(
     images: List<Bitmap>,
-    createdUri: Uri?
+    createdUri: Uri
 ) {
 
     val imgFiles = images.map { imgFile ->
@@ -267,7 +268,7 @@ private fun Context.saveDevice(
                     /* format = */ Bitmap.CompressFormat.JPEG,
                     /* quality = */ 100,
                     /* stream = */ contentResolver.openOutputStream(
-                        /* uri = */ createdUri!!,
+                        /* uri = */ createdUri,
                         /* mode = */ "rw"
                     )
                 )
