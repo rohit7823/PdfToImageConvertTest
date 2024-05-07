@@ -1,7 +1,11 @@
 package com.rohit.pdftoimageconverttest
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -10,6 +14,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.os.ParcelFileDescriptor
+import android.provider.ContactsContract
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
@@ -21,6 +26,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -35,12 +41,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.ProvidedValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -85,20 +95,67 @@ val client = HttpClient(Android) {
 
 class MainActivity : ComponentActivity() {
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, true)
+        registerReceiver(MyBroadcastReciever(), IntentFilter().apply {
+            addAction(ACTION_ONE)
+        })
         setContent {
             PdfToImageConvertTestTheme {
                 // A surface container using the 'background' color from the theme
-                Content(
+                /*Content(
                     context = this@MainActivity,
                     "Download",
-                    coroutineScope = lifecycleScope
-                )
+                    coroutineScope = lifec ycleScope
+                )*/
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    ElevatedButton(onClick = ::sendBroadCast) {
+                        Text(text = "Send Broadcast")
+                    }
+                }
+
             }
         }
     }
+
+    fun sendBroadCast() {
+
+        val alarmMgr = getSystemService(ALARM_SERVICE) as AlarmManager
+
+        alarmMgr.setRepeating(
+            AlarmManager.ELAPSED_REALTIME,
+            0L,
+            5000L,
+            PendingIntent.getBroadcast(
+                applicationContext,
+                1705,
+                Intent(this, MyBroadcastReciever::class.java).apply {
+                    action = ACTION_ONE
+                    //extras?.putString(/* key = */ "NAME", /* value = */ "ROHIT MANNA")
+                    putExtra("NAME", "ROHIT MANNA")
+                },
+                PendingIntent.FLAG_IMMUTABLE
+            ),
+        )
+
+    }
+}
+
+
+@Composable
+fun MyTheme(
+    content: @Composable () -> Unit
+) {
+    MaterialTheme(
+        content = content
+    )
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
